@@ -1,20 +1,59 @@
-# Welcome to your Expo app 👋
+# Study Together
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A collaborative study accountability app built with React Native and Expo. Study solo or with friends while tracking focus and minimizing phone distractions.
+
+## Features
+
+- 📚 Create study sessions (solo or with study partners)
+- ⏱️ Real-time session timer with progress tracking
+- 📱 Self-reporting system for phone usage violations
+- 🏆 MVP awards for most focused participants
+- 📊 Session reports with violation breakdowns
+- 📈 User statistics tracking (total hours, sessions, violations)
+- 🔥 Real-time sync across all participants
+
+## Tech Stack
+
+- **Framework**: React Native with Expo Router
+- **Backend**: Firebase (Authentication & Firestore)
+- **Navigation**: Expo Router (file-based routing)
+- **State Management**: React Hooks + Firebase real-time listeners
 
 ## Get started
 
-1. Install dependencies
+### 1. Install dependencies
 
+```bash
+npm install
+```
+
+### 2. Configure Firebase
+
+1. Copy the example environment file:
    ```bash
-   npm install
+   cp .env.example .env
    ```
 
-2. Start the app
+2. Get your Firebase credentials from [Firebase Console](https://console.firebase.google.com):
+   - Go to Project Settings → General
+   - Scroll down to "Your apps" section
+   - Copy your Firebase config values
 
-   ```bash
-   npx expo start
+3. Update `.env` with your Firebase credentials:
    ```
+   EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key_here
+   EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+   EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id_here
+   EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+   EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id_here
+   EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id_here
+   ```
+
+### 3. Start the app
+
+```bash
+npx expo start
+```
 
 In the output, you'll find options to open the app in a
 
@@ -25,15 +64,63 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
+## Project Structure
 
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+app/
+├── _layout.tsx              # Root layout with auth guard
+├── (auth)/
+│   └── login.tsx           # Login/signup screen
+├── (tabs)/
+│   ├── _layout.tsx         # Tab navigation layout
+│   ├── HomeScreen.js       # Dashboard with session list
+│   ├── CreateSessionScreen.tsx
+│   ├── ActiveSessionScreen.js
+│   └── SessionReportScreen.js
+├── components/             # Reusable components
+└── services/
+    └── firebase.js         # Firebase configuration & functions
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Security
+
+**IMPORTANT**: Never commit your `.env` file to version control!
+
+- `.env` is already in `.gitignore`
+- Firebase credentials are loaded from environment variables
+- Use `.env.example` as a template for new installations
+- Each developer/deployment needs their own `.env` file
+
+## Firestore Database Structure
+
+### Collections
+
+**users**
+```javascript
+{
+  username: string,
+  email: string,
+  totalHours: number,
+  violations: number,
+  sessionsCompleted: number,
+  createdAt: timestamp
+}
+```
+
+**sessions**
+```javascript
+{
+  hostId: string,
+  participants: [userId1, userId2],
+  status: "pending" | "active" | "ended",
+  duration: number,  // minutes
+  violations: [
+    { userId: string, timestamp: string, type: string }
+  ],
+  startTime: timestamp,
+  endTime: timestamp
+}
+```
 
 ## Learn more
 
