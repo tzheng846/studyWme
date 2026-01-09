@@ -5,7 +5,17 @@
       "mcp__ide__getDiagnostics",
       "Bash(cat:*)",
       "Bash(git check-ignore:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(dir \"C:\\\\Users\\\\TonyZheng\\\\Desktop\\\\studyWme\" /s /b)",
+      "Bash(findstr:*)",
+      "WebSearch",
+      "Bash(find:*)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx expo start:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(tree:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

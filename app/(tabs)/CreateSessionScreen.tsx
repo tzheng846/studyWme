@@ -13,15 +13,15 @@ import {
 } from "react-native";
 import {
   auth,
+  cancelSession,
   createSession,
-  getUserByEmail,
-  startSession,
+  getUserActiveSession,
+  leaveSession,
 } from "../services/firebase";
 
 const CreateSessionScreen = () => {
   const router = useRouter();
   const [duration, setDuration] = useState("25");
-  const [friendEmail, setFriendEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleCreateSession = async () => {
@@ -30,35 +30,77 @@ const CreateSessionScreen = () => {
       return;
     }
 
+    if (!auth.currentUser) {
+      Alert.alert("Error", "You must be logged in to create a session");
+      return;
+    }
+
     setLoading(true);
     try {
-      const participants = [];
+      // Check if user is already in a session
+      const existingSession = await getUserActiveSession(auth.currentUser.uid);
 
-      // Add friend if email provided
-      if (friendEmail.trim()) {
-        const friend = await getUserByEmail(friendEmail.trim());
-        if (friend) {
-          participants.push(friend.id);
-        } else {
-          Alert.alert("Warning", "Friend not found, starting solo session");
-        }
-      }
+      if (existingSession) {
+        setLoading(false);
+        const isHost = existingSession.hostId === auth.currentUser.uid;
 
-      if (!auth.currentUser) {
-        Alert.alert("Error", "You must be logged in to create a session");
+        Alert.alert(
+          "Already in a Session",
+          isHost
+            ? "You already have an active session. Would you like to go to it or cancel it?"
+            : "You're already in another session. Would you like to go to it or leave it?",
+          [
+            { text: "Stay Here", style: "cancel" },
+            {
+              text: "Go to Session",
+              onPress: () => {
+                if (existingSession.status === "active") {
+                  router.replace({
+                    pathname: "/(tabs)/ActiveSessionScreen",
+                    params: { sessionId: existingSession.id },
+                  });
+                } else {
+                  router.replace({
+                    pathname: "/(tabs)/LobbyScreen",
+                    params: { sessionId: existingSession.id },
+                  });
+                }
+              },
+            },
+            {
+              text: isHost ? "Cancel It" : "Leave It",
+              style: "destructive",
+              onPress: async () => {
+                try {
+                  if (isHost) {
+                    await cancelSession(existingSession.id);
+                  } else {
+                    await leaveSession(
+                      existingSession.id,
+                      auth.currentUser!.uid
+                    );
+                  }
+                  // Now create the new session
+                  handleCreateSession();
+                } catch (err) {
+                  Alert.alert("Error", "Failed to leave existing session");
+                }
+              },
+            },
+          ]
+        );
         return;
       }
 
       const sessionId = await createSession(
         auth.currentUser.uid,
-        participants,
+        [], // Empty participants array (just host)
         parseInt(duration)
       );
 
-      await startSession(sessionId);
-
+      // Navigate to lobby instead of active session
       router.replace({
-        pathname: "/(tabs)/ActiveSessionScreen",
+        pathname: "/(tabs)/LobbyScreen",
         params: { sessionId },
       });
     } catch (error) {
@@ -89,26 +131,15 @@ const CreateSessionScreen = () => {
           <Text style={styles.hint}>Recommended: 25, 50, or 90 minutes</Text>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Study Partner (optional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="friend@email.com"
-            value={friendEmail}
-            onChangeText={setFriendEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <Text style={styles.hint}>
-            Enter friend's email to study together
-          </Text>
-        </View>
-
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>📱 Rules</Text>
           <Text style={styles.infoText}>• Stay in the app during session</Text>
-          <Text style={styles.infoText}>• Report if you check your phone</Text>
-          <Text style={styles.infoText}>• Everyone must agree to end</Text>
+          <Text style={styles.infoText}>
+            • Exiting app will automatically flag a violation
+          </Text>
+          <Text style={styles.infoText}>
+            • Everyone must agree to end session
+          </Text>
         </View>
 
         <TouchableOpacity
@@ -117,7 +148,7 @@ const CreateSessionScreen = () => {
           disabled={loading}
         >
           <Text style={styles.buttonText}>
-            {loading ? "Creating..." : "Start Session"}
+            {loading ? "Creating..." : "Create Session"}
           </Text>
         </TouchableOpacity>
       </ScrollView>

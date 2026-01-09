@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,14 @@ import {
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
-import { login, signup } from '../services/firebase';
+import { login, signup, signInWithGoogle } from '../services/firebase';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [isSignup, setIsSignup] = useState(false);
@@ -17,6 +22,43 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Google OAuth configuration
+  // Using native redirect URI (Expo's recommended approach)
+  const redirectUri = 'com.tzheng846.studytogether:/oauth';
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    // Use iOS Client ID for native apps (not Web Client ID)
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    redirectUri: redirectUri,
+  });
+
+
+  // Handle Google OAuth response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleSignIn(id_token);
+    }
+  }, [response]);
+
+  const handleGoogleSignIn = async (idToken: string) => {
+    setLoading(true);
+    try {
+      await signInWithGoogle(idToken);
+      // Navigation handled by auth state listener
+    } catch (error: any) {
+      console.error('Google Sign-In Error:', error);
+      Alert.alert('Google Sign-In Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGooglePress = (): void => {
+    promptAsync();
+  };
 
   const handleAuth = async () => {
     if (!email || !password) {
@@ -90,6 +132,27 @@ export default function LoginScreen() {
           </Text>
         </TouchableOpacity>
 
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <TouchableOpacity
+          style={styles.googleButton}
+          onPress={handleGooglePress}
+          disabled={!request || loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#757575" />
+          ) : (
+            <>
+              <Text style={styles.googleButtonText}>🔷</Text>
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
           <Text style={styles.switchText}>
             {isSignup ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
@@ -148,5 +211,37 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#007AFF',
     fontSize: 14,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: '#999',
+    fontSize: 14,
+  },
+  googleButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 15,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  googleButtonText: {
+    color: '#757575',
+    fontSize: 16,
+    fontWeight: '600',
+    marginHorizontal: 5,
   },
 });

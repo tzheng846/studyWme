@@ -1,16 +1,17 @@
 import { Slot, useRouter, useSegments } from "expo-router";
-import { useEffect, useState } from "react";
+import { User } from "firebase/auth";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { onAuthChange } from "./services/firebase";
 
-export default function RootLayout() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function RootLayout(): React.ReactElement {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthChange((authUser: any) => {
+    const unsubscribe = onAuthChange((authUser) => {
       setUser(authUser);
       setLoading(false);
     });
